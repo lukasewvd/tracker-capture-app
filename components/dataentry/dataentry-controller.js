@@ -225,7 +225,11 @@ trackerCapture.controller('DataEntryController',
     };
 
     $scope.toggleCompForm = function() {
-        if($scope.currentStage.timelineDataEntryMode !== $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM) {
+        if(!$scope.currentStage) {
+            return;
+        }
+
+        if($scope.currentStage.timelineDataEntryMode !== $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM ) {
             $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM;
         } else {
             $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.DATAENTRYFORM;
