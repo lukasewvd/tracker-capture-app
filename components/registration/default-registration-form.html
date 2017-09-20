@@ -245,8 +245,9 @@
                     </span>
                     <span ng-switch-when="URL">
                         <input type="url"
-                               name="foo" 
+                               name="foo"
                                class="form-control"
+                               placeholder="{{'url_format' | translate}}"
                                ng-pattern="/^(http|https):\/\/[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,6}(:[0-9]{1,5})?(\/.*)?$/"
                                ng-model="selectedTei[attribute.id]"
                                ng-model-options="{ updateOn: 'default blur', allowInvalid: true }"
