@@ -29,8 +29,7 @@ trackerCapture.controller('DataEntryController',
                 OptionSetService,
                 AttributesFactory,
                 TrackerRulesFactory,
-                EventCreationService,
-                AuthorityService) {
+                EventCreationService) {
     
     //Unique instance id for the controller:
     $scope.instanceId = Math.floor(Math.random() * 1000000000);
@@ -66,7 +65,6 @@ trackerCapture.controller('DataEntryController',
     $scope.dashBoardWidgetFirstRun = true;
     $scope.showSelf = true;
     $scope.orgUnitNames = {};
-    $scope.originalDate = '';
     
     var eventLockEnabled = false;
     var eventLockHours = 8; //Number of hours before event is locked after completing.
@@ -83,8 +81,6 @@ trackerCapture.controller('DataEntryController',
     $rootScope.$broadcast('DataEntryMainMenuVisibilitySet', {visible: $scope.useMainMenu, visibleItems: $scope.visibleWidgetsInMainMenu});
     
     $scope.attributesById = CurrentSelection.getAttributesById();
-
-    $scope.userAuthority = AuthorityService.getUserAuthorities(SessionStorageService.get('USER_PROFILE'));
 
     if(!$scope.attributesById){
         $scope.attributesById = [];
@@ -156,24 +152,9 @@ trackerCapture.controller('DataEntryController',
         var dateGetter = $parse(eventDateStr);
         var dateSetter = dateGetter.assign;
         var date = dateGetter($scope);
-
-        var modalOptions = {
-            headerText: 'warning',
-            bodyText: 'no_blank_date'
-        };
-        
         if(!date) {
-            if(!$scope.originalDate) {
-                $scope.currentEvent.eventDate = $scope.currentEventOriginal.eventDate;
-            } else {
-                $scope.currentEvent.eventDate = $scope.originalDate;
-            }
-            ModalService.showModal({}, modalOptions);
             return;
-        } else {
-            $scope.originalDate = eventDateStr;
         }
-
         if($scope.selectedProgram.expiryPeriodType && $scope.selectedProgram.expiryDays) {
             if (!DateUtils.verifyExpiryDate(date, $scope.selectedProgram.expiryPeriodType, $scope.selectedProgram.expiryDays)) {
                 dateSetter($scope, null);
@@ -203,8 +184,17 @@ trackerCapture.controller('DataEntryController',
     $scope.useReferral = false;
     $scope.showReferral = false;
     //Check if user is allowed to make referrals
-    if($scope.useReferral){        
-        $scope.showReferral = $scope.userAuthority.canSearchTeiAcrossAll;        
+    if($scope.useReferral){
+        var roles = SessionStorageService.get('USER_PROFILE');
+        if( roles && roles.userCredentials && roles.userCredentials.userRoles){
+            var userRoles = roles.userCredentials.userRoles;
+            for(var i=0; i<userRoles.length; i++){
+                if(userRoles[i].authorities.indexOf('ALL') !== -1 || userRoles[i].authorities.indexOf('F_TRACKED_ENTITY_INSTANCE_SEARCH_IN_ALL_ORGUNITS') !== -1 ){
+                  $scope.showReferral = true;
+                  i=userRoles.length;
+                }
+            } 
+        }
     }
     
     $scope.$watch("model.eventSearchText", function(newValue, oldValue){        
@@ -603,10 +593,6 @@ trackerCapture.controller('DataEntryController',
     
     $scope.isCompulsory = function(dataElement) {
         return $scope.currentStage.programStageDataElementsCollection[dataElement.id].compulsory;
-    };
-
-    $scope.allowDateInFuture = function(dataElement) {
-        return $scope.currentStage.programStageDataElementsCollection[dataElement.id].allowFutureDate;
     };
     
     //check if field is hidden
@@ -1592,7 +1578,7 @@ trackerCapture.controller('DataEntryController',
         }
     };
 
-    $scope.saveEventDate = function (reOrder) {       
+    $scope.saveEventDate = function (reOrder) {        
         $scope.saveEventDateForEvent($scope.currentEvent, reOrder);        
     };
 
@@ -2064,11 +2050,7 @@ trackerCapture.controller('DataEntryController',
                 selection.load();
                 $location.path('/').search({program: $scope.selectedProgramId}); 
             }else{
-                if ($scope.currentEvent.status === 'COMPLETED') {//activiate event
-                    if( !$scope.userAuthority.canUnCompleteEvent ){
-                        NotificationService.showNotifcationDialog($translate.instant("error"), $translate.instant("not_authorized_to_uncomplete_event"));
-                        return;
-                    }
+                if ($scope.currentEvent.status === 'COMPLETED') {//activiate event                    
                     $scope.currentEvent.status = 'ACTIVE';
                 }
                 else {//complete event                    
@@ -2415,7 +2397,7 @@ trackerCapture.controller('DataEntryController',
         if(angular.isDefined(event) && angular.isObject(event) && angular.isDefined($scope.topLineEvents)){
             
             var index = -1;
-            for(var i = 0; i < $scope.topLineEvents.length; i++){
+            for(i = 0; i < $scope.topLineEvents.length; i++){
                 if(event.event === $scope.topLineEvents[i].event){
                     index = i;
                     break;
@@ -3294,5 +3276,5 @@ trackerCapture.controller('DataEntryController',
         for(var key in $scope.eventTableOptions){
             $scope.eventTableOptionsArr[$scope.eventTableOptions[key].sort] = $scope.eventTableOptions[key];
         }
-    }
+    }   
 });
