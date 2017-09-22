@@ -20,6 +20,7 @@ trackerCapture.controller('DataEntryController',
                 SessionStorageService,
                 EnrollmentService,
                 DHIS2EventFactory,
+                DashboardLayoutService,
                 ModalService,
                 NotificationService,
                 CurrentSelection,
@@ -168,7 +169,7 @@ trackerCapture.controller('DataEntryController',
         //TODO: Sort this out:
         $scope.addNewEvent(args.event);
     });
-    
+
     $scope.$on('teiupdated', function(event, args){
         var selections = CurrentSelection.get();        
         $scope.selectedTei = selections.tei;
@@ -231,8 +232,41 @@ trackerCapture.controller('DataEntryController',
 
         if($scope.currentStage.timelineDataEntryMode !== $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM ) {
             $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM;
+            
+            DashboardLayoutService.get().then(function (response) {
+                $scope.dashboardLayouts = response;
+                var selectedLayout = null;
+                
+                if ($scope.selectedProgram && $scope.selectedProgram.id) {
+                    selectedLayout = $scope.dashboardLayouts.customLayout && $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] ? $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] : $scope.dashboardLayouts.defaultLayout[$scope.selectedProgram.id];
+                }
+                selectedLayout = !selectedLayout ? defaultLayout : selectedLayout;
+    
+                angular.forEach(selectedLayout.widgets, function (widget) {
+                    if (widget.title === "dataentry") {
+                        widget.useCompForm = true;
+                    }
+                });
+                DashboardLayoutService.saveLayout(selectedLayout, false);
+            });
         } else {
             $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.DATAENTRYFORM;
+            DashboardLayoutService.get().then(function (response) {
+                $scope.dashboardLayouts = response;
+                var selectedLayout = null;
+                
+                if ($scope.selectedProgram && $scope.selectedProgram.id) {
+                    selectedLayout = $scope.dashboardLayouts.customLayout && $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] ? $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] : $scope.dashboardLayouts.defaultLayout[$scope.selectedProgram.id];
+                }
+                selectedLayout = !selectedLayout ? defaultLayout : selectedLayout;
+    
+                angular.forEach(selectedLayout.widgets, function (widget) {
+                    if (widget.title === "dataentry") {
+                        widget.useCompForm = false;
+                    }
+                });
+                DashboardLayoutService.saveLayout(selectedLayout, false);
+            });
         }
         $scope.getDataEntryForm();
     };
@@ -729,6 +763,7 @@ trackerCapture.controller('DataEntryController',
                 });
 
                 $scope.programStages = orderByFilter($scope.programStages, '-sortOrder').reverse();
+
                 if (!$scope.currentStage) {
                     $scope.currentStage = $scope.programStages[0];
                 }

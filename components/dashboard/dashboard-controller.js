@@ -240,7 +240,7 @@ trackerCapture.controller('DashboardController',
         $scope.orderChanged = false;
 
         DashboardLayoutService.get().then(function (response) {
-            $scope.dashboardLayouts = response;            
+            $scope.dashboardLayouts = response;
             var defaultLayout = $scope.dashboardLayouts.defaultLayout['DEFAULT'];
             var selectedLayout = null;
             if ($scope.selectedProgram && $scope.selectedProgram.id) {
@@ -356,11 +356,11 @@ trackerCapture.controller('DashboardController',
             if (!$scope.orderChanged) {
                 $scope.hasSmaller = $filter('filter')($scope.dashboardWidgets, {
                     parent: "smallerWidget",
-                    show: true
+                    show: true,
                 }).length > 0;
                 $scope.hasBigger = $filter('filter')($scope.dashboardWidgets, {
                     parent: "biggerWidget",
-                    show: true
+                    show: true,
                 }).length > 0;
             }
             setWidgetsSize();
