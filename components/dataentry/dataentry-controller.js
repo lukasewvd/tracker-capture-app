@@ -233,40 +233,15 @@ trackerCapture.controller('DataEntryController',
         if($scope.currentStage.timelineDataEntryMode !== $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM ) {
             $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM;
             
-            DashboardLayoutService.get().then(function (response) {
-                $scope.dashboardLayouts = response;
-                var selectedLayout = null;
-                
-                if ($scope.selectedProgram && $scope.selectedProgram.id) {
-                    selectedLayout = $scope.dashboardLayouts.customLayout && $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] ? $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] : $scope.dashboardLayouts.defaultLayout[$scope.selectedProgram.id];
-                }
-                selectedLayout = !selectedLayout ? defaultLayout : selectedLayout;
-    
-                angular.forEach(selectedLayout.widgets, function (widget) {
-                    if (widget.title === "dataentry") {
-                        widget.useCompForm = true;
-                    }
-                });
-                DashboardLayoutService.saveLayout(selectedLayout, false);
-            });
+            $scope.currentEvent.useCompForm = true;
+            console.log($scope.currentEvent);
+            DHIS2EventFactory.update($scope.currentEvent);
         } else {
             $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.DATAENTRYFORM;
-            DashboardLayoutService.get().then(function (response) {
-                $scope.dashboardLayouts = response;
-                var selectedLayout = null;
-                
-                if ($scope.selectedProgram && $scope.selectedProgram.id) {
-                    selectedLayout = $scope.dashboardLayouts.customLayout && $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] ? $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] : $scope.dashboardLayouts.defaultLayout[$scope.selectedProgram.id];
-                }
-                selectedLayout = !selectedLayout ? defaultLayout : selectedLayout;
-    
-                angular.forEach(selectedLayout.widgets, function (widget) {
-                    if (widget.title === "dataentry") {
-                        widget.useCompForm = false;
-                    }
-                });
-                DashboardLayoutService.saveLayout(selectedLayout, false);
-            });
+
+            $scope.currentEvent.useCompForm = false;
+            console.log($scope.currentEvent);
+            DHIS2EventFactory.update($scope.currentEvent);
         }
         $scope.getDataEntryForm();
     };
@@ -768,7 +743,7 @@ trackerCapture.controller('DataEntryController',
                     $scope.currentStage = $scope.programStages[0];
                 }
 
-                $scope.setCurrentStage($scope.currentStage);                
+                $scope.setCurrentStage($scope.currentStage);
 
                 if($scope.useMainMenu){
                     $scope.buildMainMenuStages();
@@ -1255,7 +1230,7 @@ trackerCapture.controller('DataEntryController',
                         $scope.currentEvent.notes = orderByFilter($scope.currentEvent.notes, '-storedDate');
                     }
                 }
-                
+                console.log($scope.currentEvent);
                 $scope.getDataEntryForm();
             }
         }
@@ -2432,7 +2407,7 @@ trackerCapture.controller('DataEntryController',
         if(angular.isDefined(event) && angular.isObject(event) && angular.isDefined($scope.topLineEvents)){
             
             var index = -1;
-            for(i = 0; i < $scope.topLineEvents.length; i++){
+            for(var i = 0; i < $scope.topLineEvents.length; i++){
                 if(event.event === $scope.topLineEvents[i].event){
                     index = i;
                     break;

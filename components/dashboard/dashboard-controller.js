@@ -240,9 +240,11 @@ trackerCapture.controller('DashboardController',
         $scope.orderChanged = false;
 
         DashboardLayoutService.get().then(function (response) {
+            console.log(response);                            
             $scope.dashboardLayouts = response;
             var defaultLayout = $scope.dashboardLayouts.defaultLayout['DEFAULT'];
             var selectedLayout = null;
+            
             if ($scope.selectedProgram && $scope.selectedProgram.id) {
                 selectedLayout = $scope.dashboardLayouts.customLayout && $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] ? $scope.dashboardLayouts.customLayout[$scope.selectedProgram.id] : $scope.dashboardLayouts.defaultLayout[$scope.selectedProgram.id];
             }
