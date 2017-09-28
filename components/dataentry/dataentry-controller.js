@@ -20,6 +20,7 @@ trackerCapture.controller('DataEntryController',
                 SessionStorageService,
                 EnrollmentService,
                 DHIS2EventFactory,
+                DashboardLayoutService,
                 ModalService,
                 NotificationService,
                 CurrentSelection,
@@ -235,10 +236,81 @@ trackerCapture.controller('DataEntryController',
     };
 
     $scope.toggleCompForm = function() {
+        if(!$scope.currentStage) {
+            return;
+        }
+
         if($scope.currentStage.timelineDataEntryMode !== $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM) {
             $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM;
+            //console.log($scope.currentStage);
+
+            DashboardLayoutService.get().then(function (response) {
+                $scope.dashboardLayouts = response;
+                var selectedLayout = response.defaultLayout;
+
+                if(!selectedLayout[$scope.selectedProgram.id]) {
+                    selectedLayout[$scope.selectedProgram.id] = selectedLayout['DEFAULT']
+                }
+
+                selectedLayout[$scope.selectedProgram.id].program = $scope.selectedProgram.id;
+    
+                angular.forEach(selectedLayout[$scope.selectedProgram.id].widgets, function (widget) {
+                    if (widget.title === "dataentry") {
+                        if(!widget.useCompForm || widget.useCompForm.length === 0) {
+                            widget.useCompForm = [];
+                            widget.useCompForm.push({id: $scope.currentStage.id, use: true});
+                        }
+                        
+                        var found = false;
+                        for(var i = 0; i < widget.useCompForm.length; i++) {
+                            if(widget.useCompForm[i].id === $scope.currentStage.id) {
+                                widget.useCompForm[i].use = true;
+                                found = true;
+                            }
+                        }
+
+                        if(!found) {
+                            widget.useCompForm.push({id: $scope.currentStage.id, use: true});
+                        }
+                    }
+                });
+                DashboardLayoutService.saveLayout(selectedLayout, true);
+            });
         } else {
             $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.DATAENTRYFORM;
+
+            DashboardLayoutService.get().then(function (response) {
+                $scope.dashboardLayouts = response;
+                var selectedLayout = response.defaultLayout;
+
+                if(!selectedLayout[$scope.selectedProgram.id]) {
+                    selectedLayout[$scope.selectedProgram.id] = selectedLayout['DEFAULT']
+                }
+
+                selectedLayout[$scope.selectedProgram.id].program = $scope.selectedProgram.id;
+    
+                angular.forEach(selectedLayout[$scope.selectedProgram.id].widgets, function (widget) {
+                    if (widget.title === "dataentry") {
+                        if(!widget.useCompForm || widget.useCompForm.length === 0) {
+                            widget.useCompForm = [];
+                            widget.useCompForm.push({id: $scope.currentStage.id, use: false});
+                        }
+                        
+                        var found = false;
+                        for(var i = 0; i < widget.useCompForm.length; i++) {
+                            if(widget.useCompForm[i].id === $scope.currentStage.id) {
+                                widget.useCompForm[i].use = false;
+                                found = true;
+                            }
+                        }
+
+                        if(!found) {
+                            widget.useCompForm.push({id: $scope.currentStage.id, use: false});
+                        }
+                    }
+                });
+                DashboardLayoutService.saveLayout(selectedLayout, true);
+            });
         }
         $scope.getDataEntryForm();
     };
@@ -1371,63 +1443,87 @@ trackerCapture.controller('DataEntryController',
     };
     
     $scope.getDataEntryForm = function () {
-        $scope.showAttributeCategoryOptions = false;
-        $scope.currentFileNames = $scope.fileNames ? ($scope.fileNames[$scope.currentEvent.event] ? $scope.fileNames[$scope.currentEvent.event] : []) : [];
-        $scope.currentStage = $scope.stagesById[$scope.currentEvent.programStage];
-        $scope.currentStageEvents = $scope.eventsByStage[$scope.currentEvent.programStage];       
+        DashboardLayoutService.get().then(function (response) {
+            $scope.dashboardLayouts = response;
+            var selectedLayout = response.defaultLayout;
 
-        angular.forEach($scope.currentStage.programStageSections, function (section) {
-            section.open = true;
-        });
-        
-        $scope.setDisplayTypeForStage($scope.currentStage);
-        $scope.customDataEntryForm = CustomFormService.getForProgramStage($scope.currentStage, $scope.prStDes);        
-        if ($scope.customDataEntryForm) {
-            $scope.displayCustomForm = "CUSTOM";
-        }else{
-            switch($scope.currentStage.timelineDataEntryMode){
-                case $scope.timelineDataEntryModes.COMPAREPREVIOUSDATAENTRYFORM:
-                    $scope.compareMode = $scope.compareDataEntryFormModes.PREVIOUS;
-                    $scope.displayCustomForm = "COMPARE";
-                    $scope.readyCompareDisplayForm();
-                    break;
-                case $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM:
-                    $scope.compareMode = $scope.compareDataEntryFormModes.ALL;
-                    $scope.displayCustomForm = "COMPARE";
-                    $scope.readyCompareDisplayForm();
-                    break;
-                case $scope.timelineDataEntryModes.TABLEDATAENTRYFORM:
-                    if($scope.reSortStageEvents === true){
-                        sortStageEvents($scope.currentStage);            
-                        if($scope.eventsByStage.hasOwnProperty($scope.currentStage.id)){
-                            $scope.currentStageEvents = $scope.eventsByStage[$scope.currentStage.id];
-                        }            
+            if(!selectedLayout[$scope.selectedProgram.id]) {
+                $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.DATAENTRYFORM;
+            } else {
+                angular.forEach(selectedLayout[$scope.selectedProgram.id].widgets['dataentryWidget'].useCompForm, function (compForm) {
+                    if(compForm.use) {
+                        angular.forEach($scope.programStages, function (stage) {
+                            if(compForm.id === stage.id) {
+                                if($scope.currentStage.id === compForm.id) {
+                                    $scope.currentStage.timelineDataEntryMode = $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM;
+                                }
+
+                                stage.timelineDataEntryMode = $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM;
+                            }
+                        });
                     }
-                    $scope.displayCustomForm = "TABLE";
-                    break;
-                
-                default:
-                    $scope.displayCustomForm = "DEFAULT";
-                    break;
+                });
             }
-        }
-
-        $scope.currentEvent.editingNotAllowed = EventUtils.getEditingStatus($scope.currentEvent, $scope.currentStage, $scope.selectedOrgUnit, $scope.selectedTei, $scope.selectedEnrollment);
-        
-        $scope.currentEventOriginal = angular.copy($scope.currentEvent);
-        
-        $scope.currentStageEventsOriginal = angular.copy($scope.currentStageEvents);
-        
-        var period = {event: $scope.currentEvent.event, stage: $scope.currentEvent.programStage, name: $scope.currentEvent.sortingDate};
-        $scope.currentPeriod[$scope.currentEvent.programStage] = period;        
-        
-        //Because of separatae dataentry-controllers for tabular and timeline data entry,
-        //the rule effects might already be in place:
-        processRuleEffect($scope.currentEvent.event);
-        
-        //Execute rules for the first time, to make the initial page appear correctly.
-        //Subsequent calls will be made from the "saveDataValue" function.        
-        $scope.executeRules();
+            
+        }).then(function () {
+            $scope.showAttributeCategoryOptions = false;
+            $scope.currentFileNames = $scope.fileNames ? ($scope.fileNames[$scope.currentEvent.event] ? $scope.fileNames[$scope.currentEvent.event] : []) : [];
+            $scope.currentStage = $scope.stagesById[$scope.currentEvent.programStage];
+            $scope.currentStageEvents = $scope.eventsByStage[$scope.currentEvent.programStage];       
+    
+            angular.forEach($scope.currentStage.programStageSections, function (section) {
+                section.open = true;
+            });
+    
+            $scope.setDisplayTypeForStage($scope.currentStage);
+            $scope.customDataEntryForm = CustomFormService.getForProgramStage($scope.currentStage, $scope.prStDes);        
+            if ($scope.customDataEntryForm) {
+                $scope.displayCustomForm = "CUSTOM";
+            }else{
+                switch($scope.currentStage.timelineDataEntryMode){
+                    case $scope.timelineDataEntryModes.COMPAREPREVIOUSDATAENTRYFORM:
+                        $scope.compareMode = $scope.compareDataEntryFormModes.PREVIOUS;
+                        $scope.displayCustomForm = "COMPARE";
+                        $scope.readyCompareDisplayForm();
+                        break;
+                    case $scope.timelineDataEntryModes.COMPAREALLDATAENTRYFORM:
+                        $scope.compareMode = $scope.compareDataEntryFormModes.ALL;
+                        $scope.displayCustomForm = "COMPARE";
+                        $scope.readyCompareDisplayForm();
+                        break;
+                    case $scope.timelineDataEntryModes.TABLEDATAENTRYFORM:
+                        if($scope.reSortStageEvents === true){
+                            sortStageEvents($scope.currentStage);            
+                            if($scope.eventsByStage.hasOwnProperty($scope.currentStage.id)){
+                                $scope.currentStageEvents = $scope.eventsByStage[$scope.currentStage.id];
+                            }            
+                        }
+                        $scope.displayCustomForm = "TABLE";
+                        break;
+                    
+                    default:
+                        $scope.displayCustomForm = "DEFAULT";
+                        break;
+                }
+            }
+    
+            $scope.currentEvent.editingNotAllowed = EventUtils.getEditingStatus($scope.currentEvent, $scope.currentStage, $scope.selectedOrgUnit, $scope.selectedTei, $scope.selectedEnrollment);
+            
+            $scope.currentEventOriginal = angular.copy($scope.currentEvent);
+            
+            $scope.currentStageEventsOriginal = angular.copy($scope.currentStageEvents);
+            
+            var period = {event: $scope.currentEvent.event, stage: $scope.currentEvent.programStage, name: $scope.currentEvent.sortingDate};
+            $scope.currentPeriod[$scope.currentEvent.programStage] = period;        
+            
+            //Because of separatae dataentry-controllers for tabular and timeline data entry,
+            //the rule effects might already be in place:
+            processRuleEffect($scope.currentEvent.event);
+            
+            //Execute rules for the first time, to make the initial page appear correctly.
+            //Subsequent calls will be made from the "saveDataValue" function.        
+            $scope.executeRules(); 
+        });
     };
 
     $scope.saveDatavalue = function (prStDe, field) {
